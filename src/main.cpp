@@ -7,6 +7,8 @@
 #include "core/ray.h"
 #include "core/utils.h"
 #include "core/scene.h"
+#include "core/objloader.h" // <--- AÑADIDO: Incluir el loader de OBJs
+#include "core/stats.h" // <--- AÑADIDO: Incluir la librería de estadísticas
 
 
 #include "shapes/sphere.h"
@@ -218,6 +220,51 @@ void buildSceneSphere(Camera*& cam, Film*& film,
    
 }
 
+// <--- AÑADIDO: NUEVA ESCENA PARA PROBAR EL OBJ
+void buildSceneMesh(Camera*& cam, Film*& film, Scene& myScene)
+{
+    /* **************************** */
+    /* Declare and place the camera */
+    /* **************************** */
+    Matrix4x4 cameraToWorld = Matrix4x4::translate(Vector3D(0, 1.0, -4));
+    double fovDegrees = 60;
+    double fovRadians = Utils::degreesToRadians(fovDegrees);
+    cam = new PerspectiveCamera(cameraToWorld, fovRadians, *film);
+
+    /* ********* */
+    /* Materials */
+    /* ********* */
+    Material* floorMaterial = new Phong(Vector3D(0.8, 0.8, 0.8), Vector3D(0, 0, 0), 100);
+    // Material para la malla
+    Material* meshMaterial = new Phong(Vector3D(0.2, 0.5, 0.8), Vector3D(0.3, 0.3, 0.3), 50);
+
+    /* ******* */
+    /* Objects */
+    /* ******* */
+    // Un suelo para darle referencia visual
+    Shape* bottomPlan = new InfinitePlan(Vector3D(0, -1.5, 0), Vector3D(0, 1, 0), floorMaterial);
+    myScene.AddObject(bottomPlan);
+
+    // Luz para iluminar la malla
+    PointLightSource* myPointLight = new PointLightSource(Vector3D(2.0, 5.0, 0.0), Vector3D(30.0));
+    myScene.AddPointLight(myPointLight);
+
+    /* ******* */
+    /* Loading */
+    /* ******* */
+    // La ruta asume que compilas en 'adriaagc-acg_raytracing.../build/'
+    // CAMBIA "tu_malla.obj" POR EL NOMBRE EXACTO DEL ARCHIVO EN LA CARPETA res
+    std::string meshPath = "../res/cube.obj";
+
+    // Parámetros de carga
+    Vector3D meshPosition = Vector3D(0.0, 0.0, 4.0); // Colocar al centro, frente a cámara
+    double targetSize = 3.0;                         // Escalar para que encaje bien en la imagen
+    double rotationY = 45.0;                         // Pequeña rotación para que no se vea totalmente frontal
+
+    loadOBJ(meshPath, meshMaterial, myScene, meshPosition, targetSize, rotationY);
+}
+// --------------------------------------------------
+
 void raytrace(Camera* &cam, Shader* &shader, Film* &film,
               std::vector<Shape*>* &objectsList, std::vector<LightSource*>* &lightSourceList)
 {
@@ -325,14 +372,20 @@ int main()
     //buildSceneSphere(cam, film, myScene); //Task 2,3,4;
     //buildSceneCornellBox(cam, film, myScene); //Task 5
 
-    buildSceneCornellBox2(cam, film, myScene); //Lab2
+    //buildSceneCornellBox2(cam, film, myScene); //Lab2
+
+    // <--- AÑADIDO: Llamamos a la nueva escena de la malla
+    buildSceneMesh(cam, film, myScene);
 
     //---------------------------------------------------------------------------
 
     //Paint Image ONLY TASK 1
     //PaintImage(film);
 
-    // Launch some rays! TASK 2,3,...   
+    // Launch some rays! TASK 2,3,...  
+    
+    Stats::get().reset(); // <--- AÑADIDO: Resetea las estadísticas antes de empezar a trazar rayos
+
     auto start = high_resolution_clock::now();
     raytrace(cam, nexteventshader, film, myScene.objectsList, myScene.LightSourceList);
     auto stop = high_resolution_clock::now();
@@ -345,6 +398,7 @@ int main()
     float durationS = (durationMs(stop - start) / 1000.0).count() ;
     std::cout <<  "FINAL_TIME(s): " << durationS << std::endl;
 
+    Stats::get().print(); // <--- AÑADIDO: Imprime el resultado de las estadísticas
 
     std::cout << "\n\n" << std::endl;
     return 0;

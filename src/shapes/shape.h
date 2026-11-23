@@ -6,6 +6,7 @@
 #include "../core/ray.h"
 #include "../materials/material.h"
 #include "../core/intersection.h"
+#include "../core/stats.h"
 
 class Shape
 {

@@ -12,6 +12,7 @@ double Utils::degreesToRadians(double degrees)
 
 bool Utils::hasIntersection(const Ray& cameraRay, const std::vector<Shape*>& objectsList) //or Shadow Ray
 {
+    STAT_INC(shadowRays);          // <-- nueva primera línea
 
     // For each object on the scene...
     for(size_t objIndex = 0; objIndex < objectsList.size(); objIndex ++)
@@ -29,6 +30,8 @@ bool Utils::hasIntersection(const Ray& cameraRay, const std::vector<Shape*>& obj
 
 bool Utils::getClosestIntersection(const Ray& cameraRay, const std::vector<Shape*>& objectsList, Intersection& its) //or Closest Hit Ray
 {
+    STAT_INC(closestHitRays);      // <-- nueva primera línea
+
     //std::cout << "Need to implement the function Utils::getClosestIntersection() in the file utils.cpp" << std::endl;
 
     bool hasIntersection = false;
