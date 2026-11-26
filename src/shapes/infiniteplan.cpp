@@ -11,6 +11,11 @@ Vector3D InfinitePlan::getNormalWorld() const
     return nWorld;
 }
 
+bool InfinitePlan::getBoundingBox(AABB& box) const
+{
+    return false; // unbounded
+}
+
 bool InfinitePlan::rayIntersect(const Ray &rayWorld, Intersection &its) const
 {
     // Compute the denominator of the tHit formula

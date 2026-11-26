@@ -7,6 +7,7 @@
 #include "../materials/material.h"
 #include "../core/intersection.h"
 #include "../core/stats.h"
+#include "../core/aabb.h"
 
 class Shape
 {
@@ -19,6 +20,9 @@ public:
     // Ray/shape intersection methods
     virtual bool rayIntersect(const Ray &ray, Intersection &its) const =0 ;
     virtual bool rayIntersectP(const Ray &ray) const = 0;
+    
+    // Find the smallest Axis-Aligned Bounding Box (AABB) in world space that encloses the shape
+    virtual bool getBoundingBox(AABB& box) const = 0;
 
     // Return the material associated with the shape
     const Material& getMaterial() const;

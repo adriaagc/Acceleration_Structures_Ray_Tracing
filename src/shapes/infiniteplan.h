@@ -16,6 +16,7 @@ public:
     // Ray/plan intersection methods
     bool rayIntersect(const Ray &ray, Intersection &its) const;
     bool rayIntersectP(const Ray &rayWorld) const;
+    bool getBoundingBox(AABB& box) const;
 
 
     // Convert triangle to String

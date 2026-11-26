@@ -19,6 +19,8 @@ public:
     bool rayIntersectP(const Ray &ray) const;
     std::string toString() const;
 
+    bool getBoundingBox(AABB& box) const;
+
 private:
     // The center of the sphere in local coordinates is assumed
     // to be (0, 0, 0). To pass to world coordinates just apply the

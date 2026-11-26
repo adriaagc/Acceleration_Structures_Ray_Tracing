@@ -8,11 +8,13 @@
 #include "core/utils.h"
 #include "core/scene.h"
 #include "core/objloader.h" // <--- AÑADIDO: Incluir el loader de OBJs
-#include "core/stats.h" // <--- AÑADIDO: Incluir la librería de estadísticas
+#include "core/stats.h"     // <--- AÑADIDO: Incluir la librería de estadísticas
+#include "core/grid.h"      // <--- AÑADIDO: Regular Grid (1st Acceleration Structure)
 
 
 #include "shapes/sphere.h"
 #include "shapes/infiniteplan.h"
+#include "shapes/triangle.h"
 
 #include "cameras/ortographic.h"
 #include "cameras/perspective.h"
@@ -34,6 +36,8 @@
 #include "materials/transmissive.h"
 
 #include <chrono>
+
+#include <random>
 
 using namespace std::chrono;
 
@@ -221,49 +225,120 @@ void buildSceneSphere(Camera*& cam, Film*& film,
 }
 
 // <--- AÑADIDO: NUEVA ESCENA PARA PROBAR EL OBJ
-void buildSceneMesh(Camera*& cam, Film*& film, Scene& myScene)
+void buildSceneCornellBoxMesh(Camera*& cam, Film*& film, Scene myScene)
 {
-    /* **************************** */
-    /* Declare and place the camera */
-    /* **************************** */
-    Matrix4x4 cameraToWorld = Matrix4x4::translate(Vector3D(0, 1.0, -4));
-    double fovDegrees = 60;
-    double fovRadians = Utils::degreesToRadians(fovDegrees);
+    // Camara: igual que en Cornell Box 2 (en z=-3, mirando hacia +z)
+    Matrix4x4 cameraToWorld = Matrix4x4::translate(Vector3D(0, 0, -3));
+    double fovRadians = Utils::degreesToRadians(60);
     cam = new PerspectiveCamera(cameraToWorld, fovRadians, *film);
 
-    /* ********* */
-    /* Materials */
-    /* ********* */
-    Material* floorMaterial = new Phong(Vector3D(0.8, 0.8, 0.8), Vector3D(0, 0, 0), 100);
-    // Material para la malla
-    Material* meshMaterial = new Phong(Vector3D(0.2, 0.5, 0.8), Vector3D(0.3, 0.3, 0.3), 50);
+    // Materiales
+    Material* redDiffuse = new Phong(Vector3D(0.7, 0.2, 0.3), Vector3D(0, 0, 0), 100);
+    Material* greenDiffuse = new Phong(Vector3D(0.2, 0.7, 0.3), Vector3D(0, 0, 0), 100);
+    Material* greyDiffuse = new Phong(Vector3D(0.8, 0.8, 0.8), Vector3D(0, 0, 0), 100);
+    Material* emissive = new Emissive(Vector3D(25, 25, 25), Vector3D(0.5));
 
-    /* ******* */
-    /* Objects */
-    /* ******* */
-    // Un suelo para darle referencia visual
-    Shape* bottomPlan = new InfinitePlan(Vector3D(0, -1.5, 0), Vector3D(0, 1, 0), floorMaterial);
+    // Naranja claro, difuso: muy distinto del fondo (negro) y de las paredes
+    // (rojo / verde / gris). NO usar un material Emissive ni Transmissive aqui.
+    Material* meshMaterial = new Phong(Vector3D(0.9, 0.5, 0.1), Vector3D(0, 0, 0), 100);
+
+    // Cornell Box (igual que Cornell Box 2)
+    double offset = 3.0;
+    Shape* leftPlan = new InfinitePlan(Vector3D(-offset - 1, 0, 0), Vector3D(1, 0, 0), redDiffuse);
+    Shape* rightPlan = new InfinitePlan(Vector3D(offset + 1, 0, 0), Vector3D(-1, 0, 0), greenDiffuse);
+    Shape* topPlan = new InfinitePlan(Vector3D(0, offset, 0), Vector3D(0, -1, 0), greyDiffuse);
+    Shape* bottomPlan = new InfinitePlan(Vector3D(0, -offset, 0), Vector3D(0, 1, 0), greyDiffuse);
+    Shape* backPlan = new InfinitePlan(Vector3D(0, 0, 3 * offset), Vector3D(0, 0, -1), greyDiffuse);
+
+    // Luz de area (Scene::AddObject crea el AreaLightSource porque el material es emisivo)
+    Shape* square_emissive = new Square(Vector3D(-1.0, 3.0, 3.0), Vector3D(2.0, 0.0, 0.0),
+        Vector3D(0.0, 0.0, 2.0), Vector3D(0.0, -1.0, 0.0), emissive);
+
+    myScene.AddObject(leftPlan);
+    myScene.AddObject(rightPlan);
+    myScene.AddObject(topPlan);
     myScene.AddObject(bottomPlan);
+    myScene.AddObject(backPlan);
+    //myScene.AddObject(square_emissive);   // <-- esta es la luz que usa NEE
 
-    // Luz para iluminar la malla
-    PointLightSource* myPointLight = new PointLightSource(Vector3D(2.0, 5.0, 0.0), Vector3D(30.0));
+    // La malla.
+    //   position   : centro del bounding box. Con targetSize 3 y y = -offset + 1.5
+    //                el cubo queda APOYADO en el suelo (base en y = -3).
+    //   z = 7      : lo suficientemente por detras de la luz (que ocupa z in [3,5])
+    //                para que la cara frontal reciba luz. A z ~ 5 la luz queda
+    //                casi en el plano de esa cara y el cubo sale casi negro.
+    //   rotY = 25  : se ven dos caras en vez de una.
+    const size_t numTriangles = loadOBJ("C:/Users/adria/Documents/GitHub/Acceleration_Structures_Ray_Tracing/res/cube.obj", meshMaterial, myScene,
+        Vector3D(0.0, -offset + 1.5, 7.0),
+        3.0,    // targetSize
+        25.0);  // rotationYDegrees
+    if (numTriangles == 0)
+        std::cerr << "ERROR: la malla no se ha cargado (revisa la ruta de cube.obj)" << std::endl;
+
+    // Igual que en Cornell Box 2 (la escena que ya renderizaba bien con NEE)
+    PointLightSource* myPointLight = new PointLightSource(Vector3D(0, 2.5, 3.0), Vector3D(2.0));
     myScene.AddPointLight(myPointLight);
-
-    /* ******* */
-    /* Loading */
-    /* ******* */
-    // La ruta asume que compilas en 'adriaagc-acg_raytracing.../build/'
-    // CAMBIA "tu_malla.obj" POR EL NOMBRE EXACTO DEL ARCHIVO EN LA CARPETA res
-    std::string meshPath = "../res/cube.obj";
-
-    // Parámetros de carga
-    Vector3D meshPosition = Vector3D(0.0, 0.0, 4.0); // Colocar al centro, frente a cámara
-    double targetSize = 3.0;                         // Escalar para que encaje bien en la imagen
-    double rotationY = 45.0;                         // Pequeña rotación para que no se vea totalmente frontal
-
-    loadOBJ(meshPath, meshMaterial, myScene, meshPosition, targetSize, rotationY);
 }
-// --------------------------------------------------
+
+
+void buildSceneCornellBoxWithTriangles(Camera*& cam, Film*& film, Scene myScene, int num_triangles)
+{
+    // Camara: igual que en Cornell Box 2 (en z=-3, mirando hacia +z)
+    Matrix4x4 cameraToWorld = Matrix4x4::translate(Vector3D(0, 0, -3));
+    double fovRadians = Utils::degreesToRadians(60);
+    cam = new PerspectiveCamera(cameraToWorld, fovRadians, *film);
+
+    // Materiales
+    Material* redDiffuse = new Phong(Vector3D(0.7, 0.2, 0.3), Vector3D(0, 0, 0), 100);
+    Material* greenDiffuse = new Phong(Vector3D(0.2, 0.7, 0.3), Vector3D(0, 0, 0), 100);
+    Material* greyDiffuse = new Phong(Vector3D(0.8, 0.8, 0.8), Vector3D(0, 0, 0), 100);
+    Material* triangleMaterial = new Phong(Vector3D(0.9, 0.5, 0.1), Vector3D(0, 0, 0), 100);
+
+    // Cornell Box
+    double offset = 3.0;
+    Shape* leftPlan = new InfinitePlan(Vector3D(-offset - 1, 0, 0), Vector3D(1, 0, 0), redDiffuse);
+    Shape* rightPlan = new InfinitePlan(Vector3D(offset + 1, 0, 0), Vector3D(-1, 0, 0), greenDiffuse);
+    Shape* topPlan = new InfinitePlan(Vector3D(0, offset, 0), Vector3D(0, -1, 0), greyDiffuse);
+    Shape* bottomPlan = new InfinitePlan(Vector3D(0, -offset, 0), Vector3D(0, 1, 0), greyDiffuse);
+    Shape* backPlan = new InfinitePlan(Vector3D(0, 0, 3 * offset), Vector3D(0, 0, -1), greyDiffuse);
+
+    myScene.AddObject(leftPlan);
+    myScene.AddObject(rightPlan);
+    myScene.AddObject(topPlan);
+    myScene.AddObject(bottomPlan);
+    myScene.AddObject(backPlan);
+
+
+    // Random number generator with a fixed seed (42) for reproducible tests
+    std::mt19937 gen(42);
+
+    double triRadius = 0.3; // Max distance from triangle center to each vertex
+    double margin = triRadius + 0.1; // Keep triangles from clipping into walls
+
+    // Safe bounds inside the Cornell Box
+    std::uniform_real_distribution<double> distX(-offset - 1.0 + margin, offset + 1.0 - margin);
+    std::uniform_real_distribution<double> distY(-offset + margin, offset - margin);
+    std::uniform_real_distribution<double> distZ(2.0 + margin, 3.0 * offset - margin);
+
+    // Local offset for each vertex around the center
+    std::uniform_real_distribution<double> distOffset(-triRadius, triRadius);
+
+    for (int i = 0; i < num_triangles; i++) {
+        Vector3D center(distX(gen), distY(gen), distZ(gen));
+
+        Vector3D v0 = center + Vector3D(distOffset(gen), distOffset(gen), distOffset(gen));
+        Vector3D v1 = center + Vector3D(distOffset(gen), distOffset(gen), distOffset(gen));
+        Vector3D v2 = center + Vector3D(distOffset(gen), distOffset(gen), distOffset(gen));
+
+        // Note: use 'new Triangle(...)' and add it to the scene
+        Shape* triangle = new Triangle(v0, v1, v2, triangleMaterial);
+        myScene.AddObject(triangle);
+    }
+
+    // Point light source because we want to run a fast shader such as WhittedIntegrator (direct light only)
+    PointLightSource* myPointLight = new PointLightSource(Vector3D(0, 2.5, 3.0), Vector3D(2.0));
+    myScene.AddPointLight(myPointLight);
+}
 
 void raytrace(Camera* &cam, Shader* &shader, Film* &film,
               std::vector<Shape*>* &objectsList, std::vector<LightSource*>* &lightSourceList)
@@ -349,10 +424,10 @@ int main()
     Vector3D intersectionColor(1,0,0);
     
     //First Assignment
-    //Shader *shader = new IntersectionShader (intersectionColor, bgColor);
-    //Shader *depthshader = new DepthShader (intersectionColor,7.5f, bgColor); //5.0f
+    //Shader* shader = new IntersectionShader (intersectionColor, bgColor);
+    //Shader* depthshader = new DepthShader (intersectionColor,7.5f, bgColor); //5.0f
     //Shader* normalshader = new NormalShader(bgColor);
-    //Shader* whittedintegrator = new WhittedIntegrator();
+    Shader* whittedintegrator = new WhittedIntegrator();
     //(... normal, whitted) ...
 
     //Lab2 Shaders
@@ -375,7 +450,17 @@ int main()
     //buildSceneCornellBox2(cam, film, myScene); //Lab2
 
     // <--- AÑADIDO: Llamamos a la nueva escena de la malla
-    buildSceneMesh(cam, film, myScene);
+    //buildSceneMesh(cam, film, myScene);
+    //buildSceneCornellBoxMesh(cam, film, myScene);
+    auto start_scene = high_resolution_clock::now();
+    buildSceneCornellBoxWithTriangles(cam, film, myScene, 1000);
+    RegularGrid grid;
+    grid.build(*myScene.objectsList);
+    Utils::setGrid(&grid); // Comment this out to benchmark brute-force!
+    auto stop_scene = high_resolution_clock::now();
+
+    float duration_sceneS = (durationMs(stop_scene - start_scene) / 1000.0).count();
+    std::cout << "BUILDING_SCENE_AND_REGULAR_GRID_TIME(s): " << duration_sceneS << std::endl;
 
     //---------------------------------------------------------------------------
 
@@ -386,8 +471,10 @@ int main()
     
     Stats::get().reset(); // <--- AÑADIDO: Resetea las estadísticas antes de empezar a trazar rayos
 
+    std::cout << "Number of Objects: " << myScene.objectsList->size() << std::endl;
+
     auto start = high_resolution_clock::now();
-    raytrace(cam, nexteventshader, film, myScene.objectsList, myScene.LightSourceList);
+    raytrace(cam, whittedintegrator, film, myScene.objectsList, myScene.LightSourceList);
     auto stop = high_resolution_clock::now();
 
     // Save the final result to file

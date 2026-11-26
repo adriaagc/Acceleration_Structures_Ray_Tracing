@@ -19,6 +19,8 @@ public:
     bool rayIntersectP(const Ray &ray) const;
     std::string toString() const;
 
+    bool getBoundingBox(AABB& box) const;
+
 
     Vector3D normal;
     Vector3D corner;

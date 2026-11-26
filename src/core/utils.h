@@ -13,9 +13,15 @@
 #define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
 #define PBWIDTH 60
 
+class RegularGrid; // forward declaration
+
 class Utils
 {
 public:
+    // For acceleration structures (regular grid):
+    static const RegularGrid* activeGrid;
+    static void setGrid(const RegularGrid* grid) { activeGrid = grid; }
+
     Utils();
 
     static bool getClosestIntersection(const Ray &cameraRay, const std::vector<Shape*> &objectsList, Intersection &its);

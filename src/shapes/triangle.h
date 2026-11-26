@@ -17,6 +17,8 @@ public:
 
     bool rayIntersect(const Ray &ray, Intersection &its) const override;
     bool rayIntersectP(const Ray &ray) const override;
+    bool getBoundingBox(AABB& box) const;
+
 
     // Normal geometrica (unitaria) en coordenadas de mundo
     Vector3D getNormalWorld() const { return normal; }

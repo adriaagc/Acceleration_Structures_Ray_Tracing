@@ -4,6 +4,24 @@ Sphere::Sphere(const double radius_, const Matrix4x4 &t_, Material *material_)
     : Shape(t_, material_), radius(radius_)
 { }
 
+bool Sphere::getBoundingBox(AABB& box) const
+{
+    box = AABB();
+
+    // Transform all 8 corners of the local bounding box [-radius, radius]^3
+    // to world space (handles translation, rotation, and scaling).
+    for (int dx = -1; dx <= 1; dx += 2) {
+        for (int dy = -1; dy <= 1; dy += 2) {
+            for (int dz = -1; dz <= 1; dz += 2) {
+                Vector3D localCorner(dx * radius, dy * radius, dz * radius);
+                Vector3D worldCorner = objectToWorld.transformPoint(localCorner);
+                box.expand(worldCorner);
+            }
+        }
+    }
+    return true;
+}
+
 // Return the normal in world coordinates
 // Pre condition: the point passed as argument to this function is in
 // world coordinates and belongs to the sphere

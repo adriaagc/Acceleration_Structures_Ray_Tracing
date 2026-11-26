@@ -8,6 +8,16 @@ Square::Square(const Vector3D pos_, const Vector3D& v1_, const Vector3D& v2_, co
     w = n / dot(n, n);
 }
 
+bool Square::getBoundingBox(AABB& box) const
+{
+    box = AABB();
+    box.expand(corner);
+    box.expand(corner + v1);
+    box.expand(corner + v2);
+    box.expand(corner + v1 + v2);
+    return true;
+}
+
 // Return the normal in world coordinates
 
 Vector3D Square::getNormalWorld(const Vector3D &pt_world) const

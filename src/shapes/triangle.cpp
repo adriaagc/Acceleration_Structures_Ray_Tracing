@@ -21,6 +21,15 @@ Triangle::Triangle(const Vector3D &v0_, const Vector3D &v1_, const Vector3D &v2_
       normal(cross(v1_ - v0_, v2_ - v0_).normalized())
 { }
 
+bool Triangle::getBoundingBox(AABB& box) const
+{
+    box = AABB();
+    box.expand(v0);
+    box.expand(v1);
+    box.expand(v2);
+    return true;
+}
+
 bool Triangle::rayIntersect(const Ray &ray, Intersection &its) const
 {
     STAT_INC(closestHitTests);   // <-- cuenta un test de triangulo (closest-hit)

@@ -1,4 +1,7 @@
 #include "utils.h"
+#include "grid.h"
+
+const RegularGrid* Utils::activeGrid = nullptr;   // definición del miembro estático
 
 Utils::Utils()
 { }
@@ -13,6 +16,8 @@ double Utils::degreesToRadians(double degrees)
 bool Utils::hasIntersection(const Ray& cameraRay, const std::vector<Shape*>& objectsList) //or Shadow Ray
 {
     STAT_INC(shadowRays);          // <-- nueva primera línea
+    if (activeGrid != nullptr)
+        return activeGrid->hasIntersection(cameraRay);
 
     // For each object on the scene...
     for(size_t objIndex = 0; objIndex < objectsList.size(); objIndex ++)
@@ -31,6 +36,8 @@ bool Utils::hasIntersection(const Ray& cameraRay, const std::vector<Shape*>& obj
 bool Utils::getClosestIntersection(const Ray& cameraRay, const std::vector<Shape*>& objectsList, Intersection& its) //or Closest Hit Ray
 {
     STAT_INC(closestHitRays);      // <-- nueva primera línea
+    if (activeGrid != nullptr)
+        return activeGrid->getClosestIntersection(cameraRay, its);
 
     //std::cout << "Need to implement the function Utils::getClosestIntersection() in the file utils.cpp" << std::endl;
 
